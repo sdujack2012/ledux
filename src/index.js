@@ -3,38 +3,40 @@ import produce from "immer"
 import set from 'lodash/set';
 import get from 'lodash/get';
 
-export const firstLetterUpperCase = string => string.charAt(0).toUpperCase() + string.slice(1);
-export const createActionName = key => `update${firstLetterUpperCase(key)}`;
-export const createSelectorName = key => `select${firstLetterUpperCase(key)}`;
+const firstLetterUpperCase = string => string.charAt(0).toUpperCase() + string.slice(1);
+const createReducerName = key => `update${firstLetterUpperCase(key)}`;
+const createSelectorName = key => `select${firstLetterUpperCase(key)}`;
 
-export const createBoilerPlate = model => {
-	const { name, basePath, config } = model;
+const getByPath = (obj, path) => path ? get(obj, path) : obj;
+const setByPath = (obj, path, value) => path ? set(obj, path, value) : obj;
+
+export const createBoilerPlate = models => {
+	const { name, basePath, config = {} } = models;
 	const reducers = {};
-	const rootInitialState = {};
+	let rootInitialState = {};
 	const selectors = {};
 	Object.keys(config).forEach(key => {
 		const { path, initialState } = config[key];
-		const fullPath = `${basePath}.${path}`;
+		const fullPath = basePath ? `${basePath}.${path}` : path;
 
-		let { reducer, selectorName, actionName } = config[key];
+		let { preProcess = (state, action) => action.payload, selectorName, reducerName } = config[key];
 
-		actionName = actionName || createActionName(key);
+		reducerName = reducerName || createReducerName(key);
 		selectorName = selectorName || createSelectorName(key);
 
-		reducer = reducer || produce((state, action) => {
-			set(state, fullPath, action.payload)
-		});
-
-		reducers[actionName] = reducer;
-		selectors[selectorName] = state => get(state, fullPath);
-		set(rootInitialState, fullPath, initialState);
+		reducers[reducerName] = produce((state, action) => setByPath(state, fullPath, preProcess(state, action)));;
+		selectors[selectorName] = state => getByPath(state, fullPath);
+		rootInitialState = setByPath(rootInitialState, fullPath, initialState);
 	});
 
 	return {
 		...createSlice({
 			name,
 			initialState: rootInitialState,
-			reducers,
+			reducers: {
+				...models.reducers,
+				...reducers,
+			},
 		}), selectors
 	};
 }

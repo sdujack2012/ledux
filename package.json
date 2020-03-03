@@ -1,6 +1,6 @@
 {
   "name": "ledux",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "Redux boilerplate reducer",
   "main": "build/index.cjs.js",
   "module": "build/index.esm.js",

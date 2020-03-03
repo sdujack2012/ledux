@@ -1,55 +1,81 @@
-# example-rollup-react-component-npm-package
+# Introduce Lelux
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/jaebradley/example-rollup-react-component-npm-package.svg)](https://greenkeeper.io/)
+Redux is probably the most popular and tested libary for application state management. We can spend a whole day talking about the benefits of using redux in an application with complicated data structure. However, it has also been criticized for introducing a lot of boilerplate. Some efforts have been made to tackle this issue. For example, @reduxjs/toolkit has a bunch of utility tools that aim to simplify action and reducer creation and thus reduce boilerplace. The idea is very good but selectors still have to be created mannually. 
 
-[![Build Status](https://travis-ci.org/jaebradley/example-rollup-react-component-npm-package.svg?branch=master)](https://travis-ci.org/jaebradley/example-rollup-react-component-npm-package)
-[![npm](https://img.shields.io/npm/dt/@jaebradley/example-rollup-react-component-npm-package.svg)](https://www.npmjs.com/package/@jaebradley/example-rollup-react-component-npm-package)
-[![npm](https://img.shields.io/npm/v/@jaebradley/example-rollup-react-component-npm-package.svg)](https://www.npmjs.com/package/@jaebradley/example-rollup-react-component-npm-package)
+To resolve this issue I have create a function called "createBoilerPlate" based on "createSlice" from @reduxjs/toolkit. createBoilerPlate supports all functionalities that createSlice has. It also creates selectors in addition to reducers and actions. The way Ledux works is that it uses the path of data in the state to create a function for both read and write. With the traditional way of writing reducers and selectors, they have to be created separately because they are two completely different functions. However, if we use the path of the data in the state we can create both reducers and selectors programatically.
 
-Example `React` component "library" using [`rollup`](https://github.com/rollup/rollup) that is published to `npm`.
+To demostate how easy is it to use createBoilerPlate, I have created the following example
 
-## `rollup` and `webpack`
+```
+import { createBoilerPlate } from 'ledux'
 
-There are a lot of articles that compare `rollup` and `webpack` (like [this](https://medium.com/webpack/webpack-and-rollup-the-same-but-different-a41ad427058c) or [this](https://webpack.js.org/comparison/) or [this](https://stackoverflow.com/a/43255948/5225575) or [this](https://nolanlawson.com/2016/08/15/the-cost-of-small-modules/)).
+const contact = createSlice({
+  name: 'contact',
+  initialState: {},
+  config: {
+    name: {
+      path:'name',
+    },
+    mobileNumber:{
+      path:'mobileNumber',
+    },
+  },
+})
 
-The general point is
-> `webpack` is generally a better fit for applications, and `rollup` is generally a better fit for libraries
-<sup>[1](#general-footnote)</sup>
+```
 
-## So what is this project?
 
-I've never used `rollup` before - hell, I've *barely* used `webpack` before.
+This will create something createSlicecreate would create but also the selectors:
 
-This was mostly to see how easy / difficult it was to create a `React` component package using `rollup` (aka "proof-of-concept").
+```
+{
+    name : string,
+    reducer : ReducerFunction,
+    actions : Object<string, ActionCreator>,
+    selectors: Object<string, Selector>,
+}
+```
 
-My requirements for this package were
+In "actions" attribute there are two action creators according to the config, updateName and updateMobileNumber
+while "selectors" has two selectors according, selectName and selectMobileNumber
 
-1. Use `babel`
-2. Use `semantic-release`
-3. Use `sass`
-4. Support `umd` and `es` modules
-5. Use `storybook`
-6. Make the exported components really simple
+The default selector name and reducer name are generated based on the key under which the config object is:
 
-## My general thoughts
+For example,
 
-* Seemed pretty easy to get started with `rollup`
-  * There are **a lot of plugins** <sup>[2](#metric-fuck-ton-footnote)</sup>
-  * Pretty easy to specify output types (`umd` and `es`, for example)
-  * Some `rollup` plugins didn't really play nicely with `babel@7` - which is why I downgraded to `6` (I could definitely be messing something up)
-* Not an easy way to plug `storybook` in
-  * It's weird and feels kind've gross because `storybook` is using `webpack` to build 😬
-* Articles that were helpful
-  * [`rollup` Guide](https://rollupjs.org/guide/en)
-  * [How I Set Up a React Component Library with Rollup](https://medium.com/tech-grandata-com/how-i-set-up-a-react-component-library-with-rollup-be6ccb700333)
-  * [Publishing Baller React Modules](https://hackernoon.com/publishing-baller-react-modules-2b039d84bce7) <sup>[3](#baller-react-modules-footnote)</sup>
-  * [Making of a Component Library for React](https://hackernoon.com/making-of-a-component-library-for-react-e6421ea4e6c7)
-  * The [`transitive-bullshit/create-react-library`](https://github.com/transitive-bullshit/create-react-library) was also very useful to inspect
+The key for the following object is name, so createBoilerPlate will create selectName selector and updateName reducer
 
-## Footnotes
+```
+ name:{
+  path:'name',
+ }
+```
 
-<ul>
-  <li><a name="general-footnote"><sup>1</sup></a>general general general general general. In general, I could do this all day.</li>
-  <li><a name="metric-fuck-ton-footnote"><sup>2</sup></a><a href="https://github.com/rollup/rollup/wiki/Plugins">Like a metric fuck ton of plugins</a></li>
-  <li><a name="baller-react-modules-footnote"><sup>3</sup></a><a href="https://media.giphy.com/media/oOTTyHRHj0HYY/giphy.gif">How I feel about "baller"</a></li>
-</ul>
+# If you want to provide custom selector name, reducer name and reducer function you can just provide selectorName, reducerName and preProcess
+
+Note that instead of using a reducer directly we use preProcess to massage the value before we write it to the path in the state. This way we prevent writing to a different path.
+
+```
+import { createBoilerPlate } from 'ledux'
+
+const contact = createSlice({
+  name: 'contact',
+  initialState: {},
+  config: {
+    name:{
+      path:'name',
+      selectorName: 'selectFancyName',
+      reducerName: 'updateFanyName',
+      preProcess: (state, action) => {
+        return "fancy" + action.payload;
+      }
+    },
+    mobileNumber:{
+      path:'mobileNumber',
+    },
+  },
+})
+
+```
+
+# createBoilerPlate is suitable for applications where simple setters and getters(read and write value from/to a path in the state) are needed. If you have already have a state design then you can use "flat" to extact the path and automate the generation of the "config" for createBoilerPlate 
